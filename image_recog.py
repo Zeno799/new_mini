@@ -24,5 +24,3 @@ def read_license_plate(image_path):
 
 
 image_path = 'test_images\binary_image_1.jpg'
-
-x = read_license_plate(image_path)
