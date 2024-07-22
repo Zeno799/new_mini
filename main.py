@@ -1,33 +1,29 @@
 import os
 import cv2
 import time
-import pytesseract
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part
 from flask import Flask, send_from_directory
 
 app = Flask('ParkMaster')
 
-pytesseract.pytesseract.tesseract_cmd = f'/usr/bin/tesseract-ocr'
-
 def read_license_plate(image_path):
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        print("Error: Image not loaded correctly.")
-        return None
+	vertexai.init(project=project_id, location="us-central1")
 
-    blurred = cv2.GaussianBlur(img, (5, 5), 0)
-    _, binary_image = cv2.threshold(blurred, 127, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+  model = GenerativeModel("gemini-1.5-flash-001")
 
-    custom_config = r'--oem 3 --psm 6'
-    plate_text = pytesseract.image_to_string(binary_image, config=custom_config)
+  image_file_uri = f'caps/numplate.jpg'
+  image_file = Part.from_uri(image_file_uri, mime_type="image/png")
 
-    plate_text = ''.join(e for e in plate_text if e.isalnum())
+  prompt = "you are an ocr, extract text"
 
-    print(f"Detected License Plate Text: {plate_text}")
+  contents = [
+      image_file,
+      prompt,
+  ]
 
-    # cv2.imshow("Original Image", img)
-    # cv2.imshow("Processed Image", binary_image)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+  response = model.generate_content(contents)
+  plate_text = response.text
 
     return plate_text
 
@@ -39,7 +35,7 @@ def root():
 
 @app.route('/capture')
 def capture():
-    os.system('raspistill -o caps/numplate.jpg')  # uncomment this to run on the raspi
+    os.system('libcamera-jpeg -o caps/numplate.jpg')  # uncomment this to run on the raspi
     license_plate = read_license_plate(f"caps/numplate.jpg")
     os.rename('caps/numplate.jpg', f'caps/{license_plate}.jpg')
     result = f'<div><p>PLATE TEXT: {license_plate}</p></div>'
