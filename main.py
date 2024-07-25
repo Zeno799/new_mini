@@ -8,24 +8,15 @@ from flask import Flask, send_from_directory
 app = Flask('ParkMaster')
 
 def read_license_plate(image_path):
-	vertexai.init(project=project_id, location="us-central1")
+    genai.configure(api_key="AIzaSyD2-qNoo3rOhdnYkfkZl0n_GeaD3eGS6lc")
 
-  model = GenerativeModel("gemini-1.5-flash-001")
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    sample_file = genai.upload_file(path=image_path,display_name="plate")
+    file = genai.get_file(name=sample_file.name)
 
-  image_file_uri = f'caps/numplate.jpg'
-  image_file = Part.from_uri(image_file_uri, mime_type="image/png")
-
-  prompt = "you are an ocr, extract text"
-
-  contents = [
-      image_file,
-      prompt,
-  ]
-
-  response = model.generate_content(contents)
-  plate_text = response.text
-
-    return plate_text
+    response = model.generate_content(["pls read text from image", file ], stream=True)
+    response.resolve()
+    return response.text
 
 plate_times = {}
 
